@@ -1,5 +1,6 @@
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.functions._
 
 object selfrequirements extends App {
 
@@ -24,14 +25,22 @@ object selfrequirements extends App {
     .load()
     .selectExpr("_c0 as OrderId", "_c1 as Timestamp", "_c2 as CustomerId", "_c3 as OrderStatus")
 
-  println("Number of orders based on zip code for particular city")
-
   //val inputcity = readLine("City Name: ")
   val inputcity = "Brownsville"
   val customerscity = customersdf.filter(customersdf("City") === inputcity)
 
-  val orderszipcode = ordersdf.join(customerscity, ordersdf("CustomerId") === customerscity("CustomerId"), "inner")
+  println("Number of orders based on zip code for particular city")
 
+  val orderszipcode = ordersdf.join(customerscity, ordersdf("CustomerId") === customerscity("CustomerId"), "inner")
   orderszipcode.groupBy("Zipcode").count().show(false)
+
+  println("Customer details whose orders are suspected to be fraud")
+  val ordersfraud = ordersdf.filter(ordersdf("OrderStatus") === "SUSPECTED_FRAUD")
+  customersdf.join(ordersfraud, customersdf("CustomerId") === ordersfraud("CustomerId"), "inner").show(false)
+
+  println("Number of Orders based on Month for a particular city")
+  val orderscity = ordersdf.join(customerscity, ordersdf("CustomerId") === customerscity("CustomerId"), "inner")
+  val orderscityMonth = orderscity.withColumn("Month", split(col("Timestamp"), "-").getItem(1))
+  orderscityMonth.groupBy("Month").count().orderBy("Month").show(false)
 
 }
